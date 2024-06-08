@@ -16,12 +16,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 16.x
       
       - name: Build
         run: |
-         npm i -g pnpm
+         npm i -g pnpm@v6
          pnpm i --shamefully-hoist --force
-         NODE_OPTIONS=--openssl-legacy-provider pnpm run build-prod
+         pnpm run build-prod
        
       - name: Upload built-dist
         uses: actions/upload-artifact@v3.1.1
