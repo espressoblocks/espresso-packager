@@ -19,7 +19,9 @@ jobs:
         run: |
          npm i -g pnpm
          pnpm i --shamefully-hoist --force
-         NODE_OPTIONS=--openssl-legacy-provider pnpm run build-prod
+         pnpm run build-prod
+        env:
+          NODE_OPTIONS: --openssl-legacy-provider
        
       - name: Upload built-dist
         uses: actions/upload-artifact@v3.1.1
