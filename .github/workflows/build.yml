@@ -6,25 +6,46 @@ on:
   pull_request:
     branches: [ master ]
   workflow_dispatch:
+
+permissions: write-all
+
 jobs:
-  build:
+  rebuild:
+    concurrency: ci-${{ github.ref }} # Recommended if you intend to make multiple deployments in quick succession.
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Install Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 16.x
-    - name: Install dependencies
-      run: npm install --legacy-peer-deps --force
-    - name: Build
-      run: npm run build
-    - name: Test
-      run: npm test
-    - name: Build standalone
-      run: npm run build-standalone-prod
-    - name: Upload standalone artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: standalone
-        path: dist/standalone.html
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - name: Build
+        run: |
+         npm i -g pnpm
+         pnpm i --shamefully-hoist --force
+         NODE_OPTIONS=--openssl-legacy-provider pnpm run build-prod
+       
+      - name: Upload built-dist
+        uses: actions/upload-artifact@v3.1.1
+        with:
+          name: built-dist
+          path: dist
+          
+      - name: Checkout to build
+        uses: actions/checkout@v3
+        with:
+          ref: build
+      
+      - name: Clean
+        run: rm -rf dist/*
+          
+      - name: Download built-dist
+        uses: actions/download-artifact@v3.0.1
+        with:
+          name: built-dist
+          path: dist/
+      
+      - name: Commit
+        uses: EndBug/add-and-commit@v9.1.1
+        with:
+          message: "Build"
+          committer_name: GitHub Actions
+          committer_email: actions@github.com
