@@ -1,55 +1,54 @@
-name: Build
-
+name: Deploy to GitHub Pages
+env:
+ GITHUB_TOKEN: ${{  secrets.t  }}
 on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
   workflow_dispatch:
+  repository_dispatch:
+  push:
 
-permissions: write-all
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "deploy"
+  cancel-in-progress: true
 
 jobs:
-  rebuild:
-    concurrency: ci-${{ github.ref }} # Recommended if you intend to make multiple deployments in quick succession.
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Setup GitHub Pages
+      id: pages
+      uses: actions/configure-pages@v4
+    - name: Install Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 16.x
+    - name: Install dependencies
+      run: npm i -g pnpm@v6 && pnpm up && pnpm i --shamefully-hoist
+    - name: Build
+      run: npm run build
+      env:
+        NODE_ENV: production
+        ENABLE_SERVICE_WORKER: 1
+    - name: Test
+      run: npm test
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: ./dist/
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 16.x
-      
-      - name: Build
-        run: |
-         npm i -g pnpm@v6
-         pnpm i --shamefully-hoist --force
-         pnpm run build-prod
-       
-      - name: Upload built-dist
-        uses: actions/upload-artifact@v3.1.1
-        with:
-          name: built-dist
-          path: dist
-          
-      - name: Checkout to build
-        uses: actions/checkout@v3
-        with:
-          ref: build
-      
-      - name: Clean
-        run: rm -rf dist/*
-          
-      - name: Download built-dist
-        uses: actions/download-artifact@v3.0.1
-        with:
-          name: built-dist
-          path: dist/
-      
-      - name: Commit
-        uses: EndBug/add-and-commit@v9.1.1
-        with:
-          message: "Build"
-          committer_name: GitHub Actions
-          committer_email: actions@github.com
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
