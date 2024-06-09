@@ -2,7 +2,7 @@ mkdir dist
 
 cd ..
 npm i --legacy-peer-deps --force
-npm run build-prod
+NODE_ENV=production npm run build
 
 cp -r dist/* cloudflare/dist/
 
